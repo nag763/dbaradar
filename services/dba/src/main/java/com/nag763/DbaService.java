@@ -5,14 +5,12 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 
 import org.eclipse.microprofile.rest.client.inject.RestClient;
-import org.jspecify.annotations.NonNull;
 
 import com.nag763.DbaSearchResponse.DbaDoc;
 
 import io.quarkus.virtual.threads.VirtualThreads;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.validation.Valid;
 
 @ApplicationScoped
 public class DbaService {

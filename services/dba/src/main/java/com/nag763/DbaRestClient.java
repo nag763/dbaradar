@@ -3,12 +3,14 @@ package com.nag763;
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
 import io.quarkus.rest.client.reactive.ClientQueryParam;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.QueryParam;
 
 @Path("/search/SEARCH_ID_BAP_COMMON")
 @RegisterRestClient(configKey = "dba")
+@ApplicationScoped
 public interface DbaRestClient {
 
     @GET

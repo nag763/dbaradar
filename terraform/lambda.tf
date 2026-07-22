@@ -2,19 +2,15 @@
 resource "aws_lambda_function" "app" {
   function_name = "dba-handler"
   role          = aws_iam_role.lambda_exec.arn
-  handler       = "io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest"
-  runtime       = "java25"
+  handler       = "bootstrap"
+  runtime       = "provided.al2023"
 
 
   s3_bucket        = aws_s3_object.lambda_code.bucket
   s3_key           = aws_s3_object.lambda_code.key
   source_code_hash = filebase64sha256(local.zip_path)
   timeout          = 10
-  memory_size      = 512
-
-  snap_start {
-    apply_on = "PublishedVersions"
-  }
+  memory_size      = 128
 }
 
 resource "aws_iam_role" "lambda_exec" {
