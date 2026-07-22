@@ -12,6 +12,7 @@ import com.nag763.DbaSearchResponse.DbaDoc;
 import io.quarkus.virtual.threads.VirtualThreads;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.validation.Valid;
 
 @ApplicationScoped
 public class DbaService {
@@ -48,7 +49,7 @@ public class DbaService {
                 .sorted(Comparator.comparing(DbaDoc::timestamp).reversed()).toList();
     }
 
-    List<DbaDoc> getQueries(@NonNull DbaQuery query) {
+    List<DbaDoc> getQueries(DbaQuery query) {
         var results = this.getParallel(query.queries());
         if(results.isEmpty() || results.size() < 20) {
             return results;
