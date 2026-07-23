@@ -3,6 +3,7 @@ package com.nag763;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record DbaSearchResponse(List<DbaDoc> docs) {
@@ -53,6 +54,11 @@ public record DbaSearchResponse(List<DbaDoc> docs) {
             Integer amount,
             String currencyCode,
             String priceUnit) {
+
+                @JsonProperty 
+                public String getDefaultCurrency() {
+                        return "DKK";
+                }
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

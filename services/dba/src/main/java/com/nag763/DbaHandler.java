@@ -1,21 +1,19 @@
 package com.nag763;
 
-import java.util.List;
-
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
-import com.amazonaws.services.lambda.runtime.logging.LogLevel;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nag763.DbaSearchResponse.DbaDoc;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
+import lombok.extern.slf4j.Slf4j;
 
 @Named("dbaHandler")
 @ApplicationScoped
-public class DbaHandler implements RequestHandler<ScheduledEvent, List<DbaDoc>> {
+@Slf4j
+public class DbaHandler implements RequestHandler<ScheduledEvent, String> {
 
     @Inject
     ObjectMapper objectMapper;
@@ -23,15 +21,18 @@ public class DbaHandler implements RequestHandler<ScheduledEvent, List<DbaDoc>> 
     @Inject 
     DbaService dbaService;
 
+    @Inject
+    LlmService llmService;
+
     @Override
-    public List<DbaDoc> handleRequest(ScheduledEvent input, Context context) {
-        var logger = context.getLogger();
-        logger.log("Handler started...\n", LogLevel.INFO);
-        logger.log(String.format("Payload received : %s\n", input), LogLevel.DEBUG);
+    public String handleRequest(ScheduledEvent input, Context context) {
+        log.info("Handler started...");
+        log.debug("Payload received : {}", input);
         DbaQuery dbaQuery = objectMapper.convertValue(input.getDetail(), DbaQuery.class);
         var results = dbaService.getQueries(dbaQuery);
-        logger.log(String.format("Number of results fetched from DBA : %d\n", results.size()));
-        return results;
+        log.info("Number of results fetched from DBA : {}", results.size());
+        var llmAnalysis = llmService.callLlm(String.format("Is there any item here that is worth buying as it is under the price you would expect ?\n%s", results.toString()));
+        return llmAnalysis;
     }
 
 }
