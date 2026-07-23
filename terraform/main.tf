@@ -7,7 +7,13 @@ terraform {
   }
 }
 
+variable "region" {
+  default = "eu-central-1"
+}
+
 # Configure the AWS Provider
 provider "aws" {
-  region = "eu-central-1"
+  region = var.region
 }
+
+data "aws_caller_identity" "current" {}

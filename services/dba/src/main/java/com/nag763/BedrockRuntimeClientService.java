@@ -15,7 +15,7 @@ public class BedrockRuntimeClientService {
     public BedrockRuntimeClient bedrockClient() {
 
         var builder = BedrockRuntimeClient.builder().region(Region.EU_CENTRAL_1);
-        if (LaunchMode.current() == LaunchMode.DEVELOPMENT) {
+        if (LaunchMode.current().isDev()) {
             builder.credentialsProvider(ProfileCredentialsProvider.create("default"));
         }
         return builder.build();

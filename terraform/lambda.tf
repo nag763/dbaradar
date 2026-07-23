@@ -2,15 +2,15 @@
 resource "aws_lambda_function" "app" {
   function_name = "dba-handler"
   role          = aws_iam_role.lambda_exec.arn
-  handler       = "bootstrap"
-  runtime       = "provided.al2023"
+  handler       = "io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest"
+  runtime       = "java25"
 
 
   s3_bucket        = aws_s3_object.lambda_code.bucket
   s3_key           = aws_s3_object.lambda_code.key
   source_code_hash = filebase64sha256(local.zip_path)
-  timeout          = 10
-  memory_size      = 128
+  timeout          = 15
+  memory_size      = 512
 }
 
 resource "aws_iam_role" "lambda_exec" {
@@ -40,7 +40,17 @@ resource "aws_iam_role" "lambda_exec" {
         Effect   = "Allow"
         Action   = ["s3:GetObject", "s3:PutObject"]
         Resource = "${aws_s3_bucket.lambda_bucket.arn}/*"
-      }]
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["bedrock:InvokeModel"]
+        Resource = "arn:aws:bedrock:eu-central-1:${data.aws_caller_identity.current.account_id}:inference-profile/eu.amazon.nova-2-lite-v1:0"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["bedrock:InvokeModel"]
+        Resource = "arn:aws:bedrock:eu-*::foundation-model/amazon.nova-2-lite-v1:0"
+      },]
     })
   }
 }
