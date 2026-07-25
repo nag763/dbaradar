@@ -24,6 +24,9 @@ public class DbaHandler implements RequestHandler<ScheduledEvent, String> {
     @Inject
     LlmService llmService;
 
+    @Inject
+    TelegramBotService telegramBotService;
+
     @Override
     public String handleRequest(ScheduledEvent input, Context context) {
         log.info("Handler started...");
@@ -32,6 +35,7 @@ public class DbaHandler implements RequestHandler<ScheduledEvent, String> {
         var results = dbaService.getQueries(dbaQuery);
         log.info("Number of results fetched from DBA : {}", results.size());
         var llmAnalysis = llmService.callLlm(String.format("Is there any item here that is worth buying as it is under the price you would expect ?\n%s", results.toString()));
+        log.info("Updates ? {}", telegramBotService.getUpdates());
         return llmAnalysis;
     }
 
