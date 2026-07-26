@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"strings"
 
@@ -17,8 +18,9 @@ type SSMGetter interface {
 
 // Config holds the resolved configuration.
 type Config struct {
-	SecretToken    string
-	TrustedChatIDs map[string]bool
+	SecretToken      string
+	TrustedChatIDs   map[string]bool
+	TelegramIPNets   []*net.IPNet
 }
 
 // Load resolves configuration from environment variables and AWS SSM.
@@ -91,8 +93,46 @@ func Load(ctx context.Context, ssmClient SSMGetter) (*Config, error) {
 		}
 	}
 
+	// Load Telegram IP ranges from SSM
+	telegramIPRangesParam := os.Getenv("TELEGRAM_IP_RANGES_PARAM")
+	var telegramIPNets []*net.IPNet
+
+	if telegramIPRangesParam != "" {
+		if ssmClient == nil {
+			cfg, err := config.LoadDefaultConfig(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load AWS config: %w", err)
+			}
+			ssmClient = ssm.NewFromConfig(cfg)
+		}
+
+		output, err := ssmClient.GetParameter(ctx, &ssm.GetParameterInput{
+			Name:           &telegramIPRangesParam,
+			WithDecryption: nil,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch Telegram IP ranges from SSM: %w", err)
+		}
+
+		if output.Parameter.Value != nil {
+			// Parse comma-separated CIDR ranges
+			ranges := strings.Split(*output.Parameter.Value, ",")
+			for _, cidr := range ranges {
+				cidr = strings.TrimSpace(cidr)
+				if cidr != "" {
+					_, ipNet, err := net.ParseCIDR(cidr)
+					if err != nil {
+						return nil, fmt.Errorf("failed to parse Telegram IP range %q: %w", cidr, err)
+					}
+					telegramIPNets = append(telegramIPNets, ipNet)
+				}
+			}
+		}
+	}
+
 	return &Config{
 		SecretToken:    token,
 		TrustedChatIDs: trustedChatIDs,
+		TelegramIPNets: telegramIPNets,
 	}, nil
 }

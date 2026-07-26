@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net"
 	"os"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -50,11 +51,49 @@ func handleRequest(ctx context.Context, request events.APIGatewayV2HTTPRequest) 
 }
 
 func handleWebhook(ctx context.Context, request events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+	sourceIP := request.RequestContext.HTTP.SourceIP
+
+	// Verify source IP is from Telegram if ranges are configured
+	if len(cfg.TelegramIPNets) > 0 {
+		ip := net.ParseIP(sourceIP)
+		if ip == nil {
+			logger.Warn("failed to parse source IP",
+				"ip", sourceIP,
+				"request_id", request.RequestContext.RequestID,
+			)
+			return events.APIGatewayV2HTTPResponse{
+				StatusCode: 401,
+				Body:       `{"error":"unauthorized"}`,
+			}, nil
+		}
+
+		allowed := false
+		for _, ipNet := range cfg.TelegramIPNets {
+			if ipNet.Contains(ip) {
+				allowed = true
+				break
+			}
+		}
+
+		if !allowed {
+			logger.Warn("webhook IP verification failed: IP not in Telegram range",
+				"ip", sourceIP,
+				"request_id", request.RequestContext.RequestID,
+			)
+			return events.APIGatewayV2HTTPResponse{
+				StatusCode: 401,
+				Body:       `{"error":"unauthorized"}`,
+			}, nil
+		}
+	}
+
+	logger.Debug("webhook IP verified", "ip", sourceIP)
+
 	// Verify token
 	token := request.Headers["x-telegram-bot-api-secret-token"]
 	if token != cfg.SecretToken {
 		logger.Warn("webhook token verification failed",
-			"ip", request.RequestContext.HTTP.SourceIP,
+			"ip", sourceIP,
 			"token_provided", token != "",
 			"request_id", request.RequestContext.RequestID,
 		)
@@ -64,7 +103,7 @@ func handleWebhook(ctx context.Context, request events.APIGatewayV2HTTPRequest) 
 		}, nil
 	}
 
-	logger.Debug("webhook token verified", "ip", request.RequestContext.HTTP.SourceIP)
+	logger.Debug("webhook token verified", "ip", sourceIP)
 
 	// Parse and handle webhook
 	response, statusCode := h.HandleWebhookRequest(ctx, request.Body)

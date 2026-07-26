@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"net"
 	"os"
 	"testing"
 
@@ -20,20 +21,23 @@ func (m *MockSSMGetter) GetParameter(ctx context.Context, params *ssm.GetParamet
 
 func TestLoadConfig(t *testing.T) {
 	tests := []struct {
-		name           string
-		envParam       string
-		envToken       string
-		envChatIDParam string
-		ssmMock        *MockSSMGetter
-		wantToken      string
-		wantChatIDs    map[string]bool
-		wantError      bool
+		name             string
+		envParam         string
+		envToken         string
+		envChatIDParam   string
+		envIPRangesParam string
+		ssmMock          *MockSSMGetter
+		wantToken        string
+		wantChatIDs      map[string]bool
+		wantIPNets       []string
+		wantError        bool
 	}{
 		{
 			name:      "direct env var",
 			envToken:  "secret-token-123",
 			wantToken: "secret-token-123",
 			wantChatIDs: map[string]bool{},
+			wantIPNets: []string{},
 		},
 		{
 			name:     "SSM parameter resolution",
@@ -50,10 +54,12 @@ func TestLoadConfig(t *testing.T) {
 			},
 			wantToken: "ssm-secret-token",
 			wantChatIDs: map[string]bool{},
+			wantIPNets: []string{},
 		},
 		{
 			name:      "missing token",
 			wantError: true,
+			wantIPNets: []string{},
 		},
 		{
 			name:     "SSM parameter preferred over direct env var",
@@ -71,6 +77,7 @@ func TestLoadConfig(t *testing.T) {
 			},
 			wantToken: "ssm-token",
 			wantChatIDs: map[string]bool{},
+			wantIPNets: []string{},
 		},
 		{
 			name:           "load trusted chat IDs from SSM",
@@ -92,6 +99,25 @@ func TestLoadConfig(t *testing.T) {
 				"456": true,
 				"789": true,
 			},
+			wantIPNets: []string{},
+		},
+		{
+			name:             "load Telegram IP ranges from SSM",
+			envToken:         "token-123",
+			envIPRangesParam: "/dba/telegram_ip_ranges",
+			ssmMock: &MockSSMGetter{
+				GetParameterFunc: func(ctx context.Context, params *ssm.GetParameterInput, optFns ...func(*ssm.Options)) (*ssm.GetParameterOutput, error) {
+					ipRangesValue := "149.154.160.0/20,91.108.4.0/22"
+					return &ssm.GetParameterOutput{
+						Parameter: &types.Parameter{
+							Value: &ipRangesValue,
+						},
+					}, nil
+				},
+			},
+			wantToken: "token-123",
+			wantChatIDs: map[string]bool{},
+			wantIPNets: []string{"149.154.160.0/20", "91.108.4.0/22"},
 		},
 	}
 
@@ -101,6 +127,7 @@ func TestLoadConfig(t *testing.T) {
 			originalParam := os.Getenv("TELEGRAM_SECRET_TOKEN_PARAM")
 			originalToken := os.Getenv("TELEGRAM_SECRET_TOKEN")
 			originalChatIDParam := os.Getenv("TRUSTED_CHAT_IDS_PARAM")
+			originalIPRangesParam := os.Getenv("TELEGRAM_IP_RANGES_PARAM")
 
 			// Set test env vars
 			if tt.envParam != "" {
@@ -121,6 +148,12 @@ func TestLoadConfig(t *testing.T) {
 				os.Unsetenv("TRUSTED_CHAT_IDS_PARAM")
 			}
 
+			if tt.envIPRangesParam != "" {
+				os.Setenv("TELEGRAM_IP_RANGES_PARAM", tt.envIPRangesParam)
+			} else {
+				os.Unsetenv("TELEGRAM_IP_RANGES_PARAM")
+			}
+
 			defer func() {
 				// Restore original env vars
 				if originalParam != "" {
@@ -137,6 +170,11 @@ func TestLoadConfig(t *testing.T) {
 					os.Setenv("TRUSTED_CHAT_IDS_PARAM", originalChatIDParam)
 				} else {
 					os.Unsetenv("TRUSTED_CHAT_IDS_PARAM")
+				}
+				if originalIPRangesParam != "" {
+					os.Setenv("TELEGRAM_IP_RANGES_PARAM", originalIPRangesParam)
+				} else {
+					os.Unsetenv("TELEGRAM_IP_RANGES_PARAM")
 				}
 			}()
 
@@ -164,6 +202,17 @@ func TestLoadConfig(t *testing.T) {
 			for id := range tt.wantChatIDs {
 				if !cfg.TrustedChatIDs[id] {
 					t.Errorf("want trusted chat ID %q, but not found", id)
+				}
+			}
+
+			if len(cfg.TelegramIPNets) != len(tt.wantIPNets) {
+				t.Errorf("want %d IP nets, got %d", len(tt.wantIPNets), len(cfg.TelegramIPNets))
+			}
+
+			for i, wantCIDR := range tt.wantIPNets {
+				_, wantNet, _ := net.ParseCIDR(wantCIDR)
+				if cfg.TelegramIPNets[i].String() != wantNet.String() {
+					t.Errorf("want IP net %q, got %q", wantNet.String(), cfg.TelegramIPNets[i].String())
 				}
 			}
 		})

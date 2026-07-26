@@ -132,6 +132,7 @@ resource "aws_lambda_function" "webhooks" {
     variables = {
       TELEGRAM_SECRET_TOKEN_PARAM = aws_ssm_parameter.telegram_webhook_secret.name
       TRUSTED_CHAT_IDS_PARAM      = aws_ssm_parameter.trusted_chat_ids.name
+      TELEGRAM_IP_RANGES_PARAM    = aws_ssm_parameter.telegram_ip_ranges.name
     }
   }
 }

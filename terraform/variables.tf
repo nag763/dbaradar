@@ -44,3 +44,9 @@ variable "trusted_chat_subscriptions" {
     "5253905011" = ["canon r7", "canon r8", "canon r6", "olympus om-d em-5", "lumix gx80", "sony a6700", "sony a6600", "sony a6400", "canon r10", "nikon z6", "nikon z5", "olympus om-d e-m10"]
   }
 }
+
+variable "telegram_ip_ranges" {
+  description = "Telegram official IP ranges for webhook validation"
+  type        = list(string)
+  default     = ["149.154.160.0/20", "91.108.4.0/22"]
+}

@@ -177,7 +177,8 @@ resource "aws_iam_role" "webhooks" {
           Action = ["ssm:GetParameter", "ssm:GetParameters"]
           Resource = [
             aws_ssm_parameter.telegram_webhook_secret.arn,
-            aws_ssm_parameter.trusted_chat_ids.arn
+            aws_ssm_parameter.trusted_chat_ids.arn,
+            aws_ssm_parameter.telegram_ip_ranges.arn
           ]
         },
         {
