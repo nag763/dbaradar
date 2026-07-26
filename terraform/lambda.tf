@@ -1,56 +1,105 @@
+# Lambda functions for the deal analyzer pipeline.
 
-resource "aws_lambda_function" "app" {
-  function_name = "dba-handler"
-  role          = aws_iam_role.lambda_exec.arn
-  handler       = "io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest"
-  runtime       = "java25"
+# --- DBA Ingestor (Quarkus Native) ---
 
+resource "aws_lambda_function" "dba_ingestor" {
+  function_name    = "dba-ingestor"
+  role             = aws_iam_role.ingestor.arn
+  handler          = "bootstrap"
+  runtime          = "provided.al2023"
+  architectures    = ["x86_64"]
+  s3_bucket        = aws_s3_object.ingestor_code.bucket
+  s3_key           = aws_s3_object.ingestor_code.key
+  source_code_hash = filebase64sha256(local.ingestor_zip_path)
+  timeout          = 30
+  memory_size      = 128
 
-  s3_bucket        = aws_s3_object.lambda_code.bucket
-  s3_key           = aws_s3_object.lambda_code.key
-  source_code_hash = filebase64sha256(local.zip_path)
-  timeout          = 15
-  memory_size      = 512
+  environment {
+    variables = {
+      DBA_EVENTS_QUEUE_URL = aws_sqs_queue.dba_events.url,
+      DBA_SEARCH_QUERIES   = join(",", var.dba_search_queries),
+    }
+  }
 }
 
-resource "aws_iam_role" "lambda_exec" {
-  name = "lambda_s3_minimal_role"
+# --- Analyzer (Go, ARM64) ---
 
-  # 1. Trust Policy (Allows Lambda to assume the role)
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Service = "lambda.amazonaws.com" }
-      Action    = "sts:AssumeRole"
-    }]
-  })
+resource "aws_lambda_function" "analyzer" {
+  function_name    = "dba-analyzer"
+  role             = aws_iam_role.analyzer.arn
+  handler          = "bootstrap"
+  runtime          = "provided.al2023"
+  architectures    = ["arm64"]
+  s3_bucket        = aws_s3_object.analyzer_code.bucket
+  s3_key           = aws_s3_object.analyzer_code.key
+  source_code_hash = filebase64sha256(local.analyzer_zip_path)
+  timeout          = 30
+  memory_size      = 128
 
-  # 2. Managed Policy for minimal CloudWatch logs
-  managed_policy_arns = [
-    "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-  ]
-
-  # 3. Inline S3 Policy
-  inline_policy {
-    name = "s3_access"
-    policy = jsonencode({
-      Version = "2012-10-17"
-      Statement = [{
-        Effect   = "Allow"
-        Action   = ["s3:GetObject", "s3:PutObject"]
-        Resource = "${aws_s3_bucket.lambda_bucket.arn}/*"
-      },
-      {
-        Effect   = "Allow"
-        Action   = ["bedrock:InvokeModel"]
-        Resource = "arn:aws:bedrock:eu-central-1:${data.aws_caller_identity.current.account_id}:inference-profile/eu.amazon.nova-2-lite-v1:0"
-      },
-      {
-        Effect   = "Allow"
-        Action   = ["bedrock:InvokeModel"]
-        Resource = "arn:aws:bedrock:eu-*::foundation-model/amazon.nova-2-lite-v1:0"
-      },]
-    })
+  environment {
+    variables = {
+      DEDUP_TABLE_NAME             = aws_dynamodb_table.analyzed_events.name
+      DEAL_NOTIFICATIONS_QUEUE_URL = aws_sqs_queue.deal_notifications.url
+    }
   }
+}
+
+resource "aws_lambda_event_source_mapping" "analyzer_trigger" {
+  event_source_arn                   = aws_sqs_queue.dba_events.arn
+  function_name                      = aws_lambda_function.analyzer.arn
+  batch_size                         = 5
+  enabled                            = true
+  function_response_types            = ["ReportBatchItemFailures"]
+  maximum_batching_window_in_seconds = 10
+}
+
+# --- Telegram Notifier (Go, ARM64) ---
+
+resource "aws_ssm_parameter" "telegram_bot_token" {
+  name        = "/dba-notifier/telegram_bot_token"
+  description = "Telegram Bot API token for deal notifications"
+  type        = "SecureString"
+  value       = var.telegram_bot_token
+}
+
+resource "aws_lambda_function" "telegram_notifier" {
+  function_name    = "dba-telegram-notifier"
+  role             = aws_iam_role.telegram_notifier.arn
+  handler          = "bootstrap"
+  runtime          = "provided.al2023"
+  architectures    = ["arm64"]
+  s3_bucket        = aws_s3_object.notifier_code.bucket
+  s3_key           = aws_s3_object.notifier_code.key
+  source_code_hash = filebase64sha256(local.notifier_zip_path)
+  timeout          = 30
+  memory_size      = 128
+
+  environment {
+    variables = {
+      TELEGRAM_BOT_TOKEN_PARAM = aws_ssm_parameter.telegram_bot_token.name
+      TELEGRAM_CHAT_ID         = var.telegram_chat_id
+    }
+  }
+}
+
+resource "aws_cloudwatch_log_group" "dba_ingestor" {
+  name              = "/aws/lambda/dba-ingestor"
+  retention_in_days = 14
+}
+
+resource "aws_cloudwatch_log_group" "analyzer" {
+  name              = "/aws/lambda/dba-analyzer"
+  retention_in_days = 14
+}
+
+resource "aws_cloudwatch_log_group" "telegram_notifier" {
+  name              = "/aws/lambda/dba-telegram-notifier"
+  retention_in_days = 14
+}
+
+resource "aws_lambda_event_source_mapping" "notifier_trigger" {
+  event_source_arn = aws_sqs_queue.deal_notifications.arn
+  function_name    = aws_lambda_function.telegram_notifier.arn
+  batch_size       = 1
+  enabled          = true
 }

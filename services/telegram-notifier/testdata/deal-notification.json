@@ -1,0 +1,13 @@
+{
+  "eventId": "12345678",
+  "heading": "iPhone 15 Pro 256GB",
+  "price": {
+    "amount": 4500,
+    "currencyCode": "DKK"
+  },
+  "canonicalUrl": "https://www.dba.dk/iphone-15-pro/id-12345678",
+  "location": "Kobenhavn",
+  "verdict": "GOOD_DEAL",
+  "reason": "Priced at 4500 DKK, roughly 40% below typical used market price of 7500 DKK",
+  "query": "iphone 15 pro"
+}

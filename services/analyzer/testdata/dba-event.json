@@ -1,0 +1,18 @@
+{
+  "eventId": "12345678",
+  "adId": 12345678,
+  "heading": "iPhone 15 Pro 256GB",
+  "price": {
+    "amount": 4500,
+    "currencyCode": "DKK"
+  },
+  "location": "Kobenhavn",
+  "canonicalUrl": "https://www.dba.dk/iphone-15-pro/id-12345678",
+  "imageUrls": ["https://images.dba.dk/example.jpg"],
+  "brand": "Apple",
+  "timestamp": 1719000000000,
+  "extras": [
+    {"id": "condition", "label": "Stand", "values": ["Brugt"]}
+  ],
+  "query": "iphone 15 pro"
+}

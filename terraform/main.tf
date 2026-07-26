@@ -14,6 +14,10 @@ variable "region" {
 # Configure the AWS Provider
 provider "aws" {
   region = var.region
+
+  default_tags {
+    tags = var.default_tags
+  }
 }
 
 data "aws_caller_identity" "current" {}
