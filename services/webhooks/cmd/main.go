@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"crypto/subtle"
 	"log/slog"
 	"net"
 	"os"
@@ -19,6 +19,10 @@ var (
 	h      *handler.Handler
 	cfg    *config.Config
 )
+
+func constantTimeEqual(a, b string) bool {
+	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
+}
 
 func init() {
 	logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
@@ -38,13 +42,12 @@ func init() {
 func handleRequest(ctx context.Context, request events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 	if request.RouteKey != "POST /webhook" {
 		logger.Warn("invalid route",
-			"route", request.RouteKey,
 			"method", request.RequestContext.HTTP.Method,
 			"ip", request.RequestContext.HTTP.SourceIP,
 		)
 		return events.APIGatewayV2HTTPResponse{
 			StatusCode: 404,
-			Body:       fmt.Sprintf(`{"error":"not found", "route": "%s"}`, request.RouteKey),
+			Body:       `{"error":"not found"}`,
 		}, nil
 	}
 	return handleWebhook(ctx, request)
@@ -89,9 +92,9 @@ func handleWebhook(ctx context.Context, request events.APIGatewayV2HTTPRequest) 
 
 	logger.Debug("webhook IP verified", "ip", sourceIP)
 
-	// Verify token
+	// Verify token using constant-time comparison
 	token := request.Headers["x-telegram-bot-api-secret-token"]
-	if token != cfg.SecretToken {
+	if !constantTimeEqual(token, cfg.SecretToken) {
 		logger.Warn("webhook token verification failed",
 			"ip", sourceIP,
 			"token_provided", token != "",

@@ -25,20 +25,18 @@ type Config struct {
 
 // Load resolves configuration from environment variables and AWS SSM.
 func Load(ctx context.Context, ssmClient SSMGetter) (*Config, error) {
-	paramName := os.Getenv("TELEGRAM_SECRET_TOKEN_PARAM")
+	if ssmClient == nil {
+		cfg, err := config.LoadDefaultConfig(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load AWS config: %w", err)
+		}
+		ssmClient = ssm.NewFromConfig(cfg)
+	}
 
+	paramName := os.Getenv("TELEGRAM_SECRET_TOKEN_PARAM")
 	var token string
 
 	if paramName != "" {
-		// Fetch from SSM
-		if ssmClient == nil {
-			cfg, err := config.LoadDefaultConfig(ctx)
-			if err != nil {
-				return nil, fmt.Errorf("failed to load AWS config: %w", err)
-			}
-			ssmClient = ssm.NewFromConfig(cfg)
-		}
-
 		withDecryption := true
 		output, err := ssmClient.GetParameter(ctx, &ssm.GetParameterInput{
 			Name:           &paramName,
@@ -52,7 +50,6 @@ func Load(ctx context.Context, ssmClient SSMGetter) (*Config, error) {
 			token = *output.Parameter.Value
 		}
 	} else {
-		// Fallback to direct env var
 		token = os.Getenv("TELEGRAM_SECRET_TOKEN")
 	}
 
@@ -60,19 +57,9 @@ func Load(ctx context.Context, ssmClient SSMGetter) (*Config, error) {
 		return nil, fmt.Errorf("telegram secret token not configured")
 	}
 
-	// Load trusted chat IDs from SSM
-	trustedChatIDsParam := os.Getenv("TRUSTED_CHAT_IDS_PARAM")
 	trustedChatIDs := make(map[string]bool)
-
+	trustedChatIDsParam := os.Getenv("TRUSTED_CHAT_IDS_PARAM")
 	if trustedChatIDsParam != "" {
-		if ssmClient == nil {
-			cfg, err := config.LoadDefaultConfig(ctx)
-			if err != nil {
-				return nil, fmt.Errorf("failed to load AWS config: %w", err)
-			}
-			ssmClient = ssm.NewFromConfig(cfg)
-		}
-
 		output, err := ssmClient.GetParameter(ctx, &ssm.GetParameterInput{
 			Name:           &trustedChatIDsParam,
 			WithDecryption: nil,
@@ -82,7 +69,6 @@ func Load(ctx context.Context, ssmClient SSMGetter) (*Config, error) {
 		}
 
 		if output.Parameter.Value != nil {
-			// Parse comma-separated list
 			ids := strings.Split(*output.Parameter.Value, ",")
 			for _, id := range ids {
 				id = strings.TrimSpace(id)
@@ -93,19 +79,9 @@ func Load(ctx context.Context, ssmClient SSMGetter) (*Config, error) {
 		}
 	}
 
-	// Load Telegram IP ranges from SSM
-	telegramIPRangesParam := os.Getenv("TELEGRAM_IP_RANGES_PARAM")
 	var telegramIPNets []*net.IPNet
-
+	telegramIPRangesParam := os.Getenv("TELEGRAM_IP_RANGES_PARAM")
 	if telegramIPRangesParam != "" {
-		if ssmClient == nil {
-			cfg, err := config.LoadDefaultConfig(ctx)
-			if err != nil {
-				return nil, fmt.Errorf("failed to load AWS config: %w", err)
-			}
-			ssmClient = ssm.NewFromConfig(cfg)
-		}
-
 		output, err := ssmClient.GetParameter(ctx, &ssm.GetParameterInput{
 			Name:           &telegramIPRangesParam,
 			WithDecryption: nil,
@@ -115,7 +91,6 @@ func Load(ctx context.Context, ssmClient SSMGetter) (*Config, error) {
 		}
 
 		if output.Parameter.Value != nil {
-			// Parse comma-separated CIDR ranges
 			ranges := strings.Split(*output.Parameter.Value, ",")
 			for _, cidr := range ranges {
 				cidr = strings.TrimSpace(cidr)

@@ -128,6 +128,13 @@ func (h *Handler) HandleWebhookRequest(ctx context.Context, body string) (string
 		Text:   responseText,
 	}
 
-	respBody, _ := json.Marshal(response)
+	respBody, err := json.Marshal(response)
+	if err != nil {
+		h.logger.Error("failed to marshal command response",
+			"error", err,
+			"command", cmd.Name,
+		)
+		return `{"error":"internal error"}`, 500
+	}
 	return string(respBody), 200
 }
