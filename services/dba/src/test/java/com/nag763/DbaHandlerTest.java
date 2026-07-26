@@ -29,6 +29,9 @@ class DbaHandlerTest {
     @Mock
     Context context;
 
+    @Mock
+    SubscriptionsLoader subscriptionsLoader;
+
     @InjectMocks
     DbaHandler handler;
 
@@ -36,7 +39,6 @@ class DbaHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler.searchQueriesConfig = "iphone 15 pro";
         handler.searchLimit = 20;
 
         sampleDocs = List.of(
@@ -65,37 +67,38 @@ class DbaHandlerTest {
     @Test
     void handleRequest_fetchesAndPublishes() {
         when(dbaService.getQueries(any(DbaQuery.class))).thenReturn(sampleDocs);
-        when(sqsPublisher.publish(anyList(), anyString())).thenReturn(1);
+        when(subscriptionsLoader.loadAll()).thenReturn(java.util.Map.of("5253905011", List.of("iphone 15 pro")));
+        when(sqsPublisher.publish(anyList(), anyString(), anyString())).thenReturn(1);
 
         String result = handler.handleRequest(null, context);
 
         verify(dbaService).getQueries(any(DbaQuery.class));
-        verify(sqsPublisher).publish(eq(sampleDocs), eq("iphone 15 pro"));
-        assertTrue(result.contains("1 listings"));
+        verify(sqsPublisher).publish(eq(sampleDocs), eq("iphone 15 pro"), eq("5253905011"));
         assertTrue(result.contains("1 events"));
+        assertTrue(result.contains("1 subscriptions"));
     }
 
     @Test
     void handleRequest_emptyResults_publishesNothing() {
-        handler.searchQueriesConfig = "nonexistent";
         handler.searchLimit = 10;
 
         when(dbaService.getQueries(any(DbaQuery.class))).thenReturn(List.of());
-        when(sqsPublisher.publish(anyList(), anyString())).thenReturn(0);
+        when(subscriptionsLoader.loadAll()).thenReturn(java.util.Map.of("5253905011", List.of("nonexistent")));
+        when(sqsPublisher.publish(anyList(), anyString(), anyString())).thenReturn(0);
 
         String result = handler.handleRequest(null, context);
 
-        verify(sqsPublisher).publish(eq(List.of()), eq("nonexistent"));
-        assertTrue(result.contains("0 listings"));
+        verify(sqsPublisher).publish(eq(List.of()), eq("nonexistent"), eq("5253905011"));
+        assertTrue(result.contains("0 events"));
     }
 
     @Test
-    void handleRequest_emptyQueriesConfig_returnsErrorMessage() {
-        handler.searchQueriesConfig = " , ";
+    void handleRequest_noSubscriptions_returnsErrorMessage() {
+        when(subscriptionsLoader.loadAll()).thenReturn(java.util.Collections.emptyMap());
 
         String result = handler.handleRequest(null, context);
 
-        assertEquals("No valid queries found in configuration", result);
+        assertEquals("No subscriptions configured", result);
         verifyNoInteractions(dbaService);
         verifyNoInteractions(sqsPublisher);
     }

@@ -70,7 +70,7 @@ class SqsPublisherTest {
         when(sqsClient.sendMessage(any(Consumer.class)))
                 .thenReturn(SendMessageResponse.builder().messageId("msg-1").build());
 
-        int result = publisher.publish(docs, "iphone 15");
+        int result = publisher.publish(docs, "iphone 15", "");
 
         assertEquals(1, result);
 
@@ -84,11 +84,13 @@ class SqsPublisherTest {
         assertTrue(request.messageBody().startsWith("{"));
         assertTrue(request.messageBody().contains("\"id\":\"1\""));
         assertTrue(request.messageBody().contains("\"query\":\"iphone 15\""));
+        // chatId field should be present (empty string in this test)
+        assertTrue(request.messageBody().contains("\"chatId\":\"\""));
     }
 
     @Test
     void publish_emptyList_doesNotCallSqs() {
-        int result = publisher.publish(List.of(), "test");
+        int result = publisher.publish(List.of(), "test", "");
 
         assertEquals(0, result);
         verifyNoInteractions(sqsClient);
@@ -122,7 +124,7 @@ class SqsPublisherTest {
         when(sqsClient.sendMessage(any(Consumer.class)))
                 .thenReturn(SendMessageResponse.builder().messageId("msg-batch").build());
 
-        int result = publisher.publish(docs, "test");
+        int result = publisher.publish(docs, "test", "");
 
         assertEquals(12, result);
 
@@ -136,5 +138,7 @@ class SqsPublisherTest {
         assertTrue(request.messageBody().startsWith("["));
         assertTrue(request.messageBody().contains("\"id\":\"0\""));
         assertTrue(request.messageBody().contains("\"id\":\"11\""));
+        // chatId field should be present (empty string in this test)
+        assertTrue(request.messageBody().contains("\"chatId\":\"\""));
     }
 }

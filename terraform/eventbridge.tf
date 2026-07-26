@@ -3,7 +3,7 @@
 # 1. Daytime schedule: Every 10 minutes between 09:00 and 21:59 (9 to 22)
 resource "aws_cloudwatch_event_rule" "dba_schedule_daytime" {
   name                = "dba-ingestor-schedule-daytime"
-  description         = "Triggers DBA ingestor Lambda every 10 minutes between 09:00 and 22:00"
+  description         = "Triggers DBA ingestor Lambda every 30 minutes between 07:00 and 21:59 UTC (8 AM-10 PM Paris)"
   schedule_expression = var.ingestor_schedule_daytime
 }
 
@@ -24,7 +24,7 @@ resource "aws_lambda_permission" "eventbridge_invoke_ingestor_daytime" {
 # 2. Off-peak schedule: Every 30 minutes outside daytime hours (22:00 to 08:59)
 resource "aws_cloudwatch_event_rule" "dba_schedule_offpeak" {
   name                = "dba-ingestor-schedule-offpeak"
-  description         = "Triggers DBA ingestor Lambda every 30 minutes outside 09:00 to 22:00"
+  description         = "Triggers DBA ingestor Lambda every hour between 22:00-23:59 and 00:00-06:59 UTC"
   schedule_expression = var.ingestor_schedule_offpeak
 }
 

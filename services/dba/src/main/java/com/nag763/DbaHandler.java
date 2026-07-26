@@ -1,6 +1,5 @@
 package com.nag763;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,10 +24,6 @@ import lombok.extern.slf4j.Slf4j;
 public class DbaHandler implements RequestHandler<Object, String> {
 
     @Inject
-    @ConfigProperty(name = "dba.search.queries", defaultValue = "canon,nikon,lumix,olympus")
-    String searchQueriesConfig;
-
-    @Inject
     @ConfigProperty(name = "dba.search.limit", defaultValue = "20")
     int searchLimit;
 
@@ -38,32 +33,32 @@ public class DbaHandler implements RequestHandler<Object, String> {
     @Inject
     SqsPublisher sqsPublisher;
 
+    @Inject
+    SubscriptionsLoader subscriptionsLoader;
+
     @Override
     public String handleRequest(Object input, Context context) {
         log.info("DBA Ingestor started...");
 
-        List<String> queries = Arrays.stream(searchQueriesConfig.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .toList();
-
-        if (queries.isEmpty()) {
-            log.error("No search queries configured");
-            return "No valid queries found in configuration";
-        }
-
-        DbaQuery dbaQuery = new DbaQuery(Optional.of(searchLimit), Optional.empty(), queries);
-        log.info("Loaded DbaQuery from environment: {}", dbaQuery);
-
-        var results = dbaService.getQueries(dbaQuery);
-        log.info("Fetched {} listings from DBA", results.size());
-
+        var subscriptions = subscriptionsLoader.loadAll();
         int totalPublished = 0;
-        for (String query : dbaQuery.queries()) {
-            totalPublished += sqsPublisher.publish(results, query);
+
+        if (subscriptions.isEmpty()) {
+            log.error("No subscriptions found");
+            return "No subscriptions configured";
         }
 
-        String summary = String.format("Ingested %d listings, published %d events", results.size(), totalPublished);
+        for (var entry : subscriptions.entrySet()) {
+            String chatId = entry.getKey();
+            for (String q : entry.getValue()) {
+                DbaQuery dq = new DbaQuery(Optional.of(searchLimit), Optional.empty(), List.of(q));
+                var results = dbaService.getQueries(dq);
+                log.info("Fetched {} listings for query '{}'", results.size(), q);
+                totalPublished += sqsPublisher.publish(results, q, chatId);
+            }
+        }
+
+        String summary = String.format("Published %d events for %d subscriptions", totalPublished, subscriptions.size());
         log.info(summary);
         return summary;
     }

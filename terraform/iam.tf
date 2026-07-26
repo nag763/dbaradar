@@ -32,6 +32,16 @@ resource "aws_iam_role" "ingestor" {
           Effect   = "Allow"
           Action   = ["s3:GetObject", "s3:PutObject"]
           Resource = "${aws_s3_bucket.lambda_bucket.arn}/*"
+        },
+        {
+          Effect   = "Allow"
+          Action   = ["ssm:GetParameter", "ssm:GetParameters"]
+          Resource = aws_ssm_parameter.trusted_chat_ids.arn
+        },
+        {
+          Effect   = "Allow"
+          Action   = ["dynamodb:Query"]
+          Resource = aws_dynamodb_table.trusted_chat_queries.arn
         }
       ]
     })
@@ -84,6 +94,16 @@ resource "aws_iam_role" "analyzer" {
             "arn:aws:bedrock:eu-central-1:${data.aws_caller_identity.current.account_id}:inference-profile/eu.amazon.nova-2-lite-v1:0",
             "arn:aws:bedrock:eu-*::foundation-model/amazon.nova-2-lite-v1:0"
           ]
+        },
+        {
+          Effect   = "Allow"
+          Action   = ["ssm:GetParameter", "ssm:GetParameters"]
+          Resource = aws_ssm_parameter.trusted_chat_ids.arn
+        },
+        {
+          Effect   = "Allow"
+          Action   = ["dynamodb:Query"]
+          Resource = aws_dynamodb_table.trusted_chat_queries.arn
         }
       ]
     })

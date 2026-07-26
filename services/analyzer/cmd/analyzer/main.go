@@ -13,10 +13,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/nag763/dbaradar/services/analyzer/internal/dedup"
 	"github.com/nag763/dbaradar/services/analyzer/internal/handler"
 	"github.com/nag763/dbaradar/services/analyzer/internal/llm"
 	"github.com/nag763/dbaradar/services/analyzer/internal/publisher"
+	"github.com/nag763/dbaradar/services/analyzer/internal/subscriptions"
 )
 
 func main() {
@@ -52,7 +54,17 @@ func main() {
 	llmSvc := llm.NewService(bedrockruntime.NewFromConfig(cfg))
 	pubSvc := publisher.NewService(sqs.NewFromConfig(cfg), queueURL)
 
-	h := handler.NewHandler(dedupSvc, llmSvc, pubSvc, logger)
+	// Create SSM client for resolving TRUSTED_CHAT_IDS (user prefers SSM)
+	ssmClient := ssm.NewFromConfig(cfg)
+
+	// Subscriptions service loads TRUSTED_CHAT_IDS and fetches queries from DynamoDB
+	subsSvc, err := subscriptions.NewService(dynamodb.NewFromConfig(cfg), ssmClient, logger)
+	if err != nil {
+		logger.Error("failed to init subscriptions service", "error", err)
+		os.Exit(1)
+	}
+
+	h := handler.NewHandlerWithSubscriptions(dedupSvc, llmSvc, pubSvc, subsSvc, logger)
 
 	lambda.Start(h.HandleEvent)
 }

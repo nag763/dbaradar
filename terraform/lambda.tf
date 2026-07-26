@@ -16,8 +16,9 @@ resource "aws_lambda_function" "dba_ingestor" {
 
   environment {
     variables = {
-      DBA_EVENTS_QUEUE_URL = aws_sqs_queue.dba_events.url,
-      DBA_SEARCH_QUERIES   = join(",", var.dba_search_queries),
+      DBA_EVENTS_QUEUE_URL       = aws_sqs_queue.dba_events.url,
+      TRUSTED_CHAT_QUERIES_TABLE = aws_dynamodb_table.trusted_chat_queries.name,
+      TRUSTED_CHAT_IDS_PARAM     = aws_ssm_parameter.trusted_chat_ids.name,
     }
   }
 }
@@ -40,6 +41,8 @@ resource "aws_lambda_function" "analyzer" {
     variables = {
       DEDUP_TABLE_NAME             = aws_dynamodb_table.analyzed_events.name
       DEAL_NOTIFICATIONS_QUEUE_URL = aws_sqs_queue.deal_notifications.url
+      TRUSTED_CHAT_IDS_PARAM       = aws_ssm_parameter.trusted_chat_ids.name
+      TRUSTED_CHAT_QUERIES_TABLE   = aws_dynamodb_table.trusted_chat_queries.name
     }
   }
 }

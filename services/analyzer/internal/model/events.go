@@ -32,6 +32,7 @@ type Extra struct {
 
 // DealNotification is published to the deal-notifications queue when
 // a listing is confirmed as a good deal by the LLM.
+// ChatID is the target Telegram chat that should receive the notification.
 type DealNotification struct {
 	EventID      string `json:"eventId"`
 	Heading      string `json:"heading"`
@@ -41,6 +42,7 @@ type DealNotification struct {
 	Verdict      string `json:"verdict"`
 	Reason       string `json:"reason"`
 	Query        string `json:"query"`
+	ChatID       string `json:"chatId,omitempty"`
 }
 
 // LLMVerdict represents the structured response from the Bedrock LLM.

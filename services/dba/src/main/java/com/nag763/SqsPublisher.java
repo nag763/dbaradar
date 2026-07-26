@@ -41,21 +41,21 @@ public class SqsPublisher {
      * @param query the search query that produced these results
      * @return the number of successfully published items
      */
-    public int publish(List<DbaDoc> docs, String query) {
+    public int publish(List<DbaDoc> docs, String query, String chatId) {
         if (docs == null || docs.isEmpty()) {
             return 0;
         }
 
         if (docs.size() == 1) {
-            return sendSingle(docs.get(0), query);
+            return sendSingle(docs.get(0), query, chatId);
         }
 
-        return sendArrayBatch(docs, query);
+        return sendArrayBatch(docs, query, chatId);
     }
 
-    private int sendSingle(DbaDoc doc, String query) {
+    private int sendSingle(DbaDoc doc, String query, String chatId) {
         try {
-            DbaEvent event = toEvent(doc, query);
+            DbaEvent event = toEvent(doc, query, chatId);
             String body = objectMapper.writeValueAsString(event);
             sqsClient.sendMessage(builder -> builder.queueUrl(queueUrl).messageBody(body));
             return 1;
@@ -65,10 +65,10 @@ public class SqsPublisher {
         }
     }
 
-    private int sendArrayBatch(List<DbaDoc> docs, String query) {
+    private int sendArrayBatch(List<DbaDoc> docs, String query, String chatId) {
         List<DbaEvent> events = new ArrayList<>();
         for (DbaDoc doc : docs) {
-            events.add(toEvent(doc, query));
+            events.add(toEvent(doc, query, chatId));
         }
 
         try {
@@ -81,7 +81,7 @@ public class SqsPublisher {
         }
     }
 
-    private DbaEvent toEvent(DbaDoc doc, String query) {
+    private DbaEvent toEvent(DbaDoc doc, String query, String chatId) {
         return DbaEvent.builder()
                 .eventId(UUID.randomUUID().toString())
                 .id(doc.id())
@@ -94,6 +94,7 @@ public class SqsPublisher {
                 .timestamp(doc.timestamp())
                 .extras(doc.extras())
                 .query(query)
+                .chatId(chatId)
                 .build();
     }
 }

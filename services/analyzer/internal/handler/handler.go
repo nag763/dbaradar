@@ -13,24 +13,33 @@ import (
 	"github.com/nag763/dbaradar/services/analyzer/internal/llm"
 	"github.com/nag763/dbaradar/services/analyzer/internal/model"
 	"github.com/nag763/dbaradar/services/analyzer/internal/publisher"
+	"github.com/nag763/dbaradar/services/analyzer/internal/subscriptions"
 )
 
 // Handler processes SQS messages from the dba-events queue.
 type Handler struct {
-	dedup     *dedup.Service
-	llm       *llm.Service
-	publisher *publisher.Service
-	logger    *slog.Logger
+	dedup         *dedup.Service
+	llm           *llm.Service
+	publisher     *publisher.Service
+	subscriptions *subscriptions.Service
+	logger        *slog.Logger
 }
 
-// NewHandler creates a handler with all required dependencies.
-func NewHandler(dedup *dedup.Service, llm *llm.Service, publisher *publisher.Service, logger *slog.Logger) *Handler {
+// NewHandlerWithSubscriptions creates a handler with all required dependencies including subscriptions.
+func NewHandlerWithSubscriptions(dedup *dedup.Service, llm *llm.Service, publisher *publisher.Service, subs *subscriptions.Service, logger *slog.Logger) *Handler {
 	return &Handler{
-		dedup:     dedup,
-		llm:       llm,
-		publisher: publisher,
-		logger:    logger,
+		dedup:         dedup,
+		llm:           llm,
+		publisher:     publisher,
+		subscriptions: subs,
+		logger:        logger,
 	}
+}
+
+// NewHandler preserves the original constructor signature for tests and simple usage.
+// It creates a handler without subscription awareness (subscriptions=nil).
+func NewHandler(dedup *dedup.Service, llm *llm.Service, publisher *publisher.Service, logger *slog.Logger) *Handler {
+	return NewHandlerWithSubscriptions(dedup, llm, publisher, nil, logger)
 }
 
 // HandleEvent processes a batch of SQS messages, returning partial failures.
@@ -111,6 +120,14 @@ func (h *Handler) processSingleEvent(ctx context.Context, event model.DbaEvent) 
 		"price", event.Price.Amount,
 	)
 
+	// If subscriptions service is configured, skip events whose query is not subscribed by any trusted chat.
+	if h.subscriptions != nil {
+		if !h.subscriptions.IsQuerySubscribed(event.Query) {
+			h.logger.Info("query not subscribed by any trusted chat, skipping", "query", event.Query, "eventId", event.EventID)
+			return false, nil
+		}
+	}
+
 	processed, err := h.dedup.IsProcessed(ctx, event.Id)
 	if err != nil {
 		return false, err
@@ -142,20 +159,49 @@ func (h *Handler) processSingleEvent(ctx context.Context, event model.DbaEvent) 
 	}
 
 	if verdict.Verdict == model.VerdictGoodDeal {
-		notification := model.DealNotification{
-			EventID:      event.EventID,
-			Heading:      event.Heading,
-			Price:        event.Price,
-			CanonicalURL: event.CanonicalURL,
-			Location:     event.Location,
-			Verdict:      verdict.Verdict,
-			Reason:       verdict.Reason,
-			Query:        event.Query,
+		// If subscriptions service is not configured, preserve previous behavior: publish a single notification
+		if h.subscriptions == nil {
+			notification := model.DealNotification{
+				EventID:      event.EventID,
+				Heading:      event.Heading,
+				Price:        event.Price,
+				CanonicalURL: event.CanonicalURL,
+				Location:     event.Location,
+				Verdict:      verdict.Verdict,
+				Reason:       verdict.Reason,
+				Query:        event.Query,
+			}
+			if err := h.publisher.Publish(ctx, notification); err != nil {
+				return false, err
+			}
+			h.logger.Info("deal notification published", "eventId", event.EventID, "id", event.Id)
+			return true, nil
 		}
-		if err := h.publisher.Publish(ctx, notification); err != nil {
-			return false, err
+
+		chatIDs := h.subscriptions.GetChatIDsForQuery(event.Query)
+		if len(chatIDs) == 0 {
+			h.logger.Info("no subscribed chat IDs found for query, skipping publish", "query", event.Query)
+			return true, nil
 		}
-		h.logger.Info("deal notification published", "eventId", event.EventID, "id", event.Id)
+
+		for _, cid := range chatIDs {
+			notification := model.DealNotification{
+				EventID:      event.EventID,
+				Heading:      event.Heading,
+				Price:        event.Price,
+				CanonicalURL: event.CanonicalURL,
+				Location:     event.Location,
+				Verdict:      verdict.Verdict,
+				Reason:       verdict.Reason,
+				Query:        event.Query,
+				ChatID:       cid,
+			}
+			if err := h.publisher.Publish(ctx, notification); err != nil {
+				return false, err
+			}
+			h.logger.Info("deal notification published", "eventId", event.EventID, "id", event.Id, "chatId", cid)
+		}
+
 		return true, nil
 	}
 

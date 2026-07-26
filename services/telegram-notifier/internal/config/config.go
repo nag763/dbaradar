@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
@@ -24,6 +25,8 @@ type Config struct {
 // Load resolves configuration values using environment variables and AWS SSM Parameter Store fallback.
 // It checks TELEGRAM_BOT_TOKEN_PARAM first; if present, it fetches the secret value from SSM.
 // Otherwise, it falls back to TELEGRAM_BOT_TOKEN.
+// Additionally, it validates that TELEGRAM_CHAT_ID is present in TRUSTED_CHAT_IDS
+// which can be provided via TRUSTED_CHAT_IDS or TRUSTED_CHAT_IDS_PARAM (SSM).
 func Load(ctx context.Context, ssmClient SSMGetter) (*Config, error) {
 	botToken, err := resolveParameter(ctx, ssmClient, "TELEGRAM_BOT_TOKEN_PARAM", "TELEGRAM_BOT_TOKEN")
 	if err != nil {
@@ -36,6 +39,26 @@ func Load(ctx context.Context, ssmClient SSMGetter) (*Config, error) {
 	chatID := os.Getenv("TELEGRAM_CHAT_ID")
 	if chatID == "" {
 		return nil, fmt.Errorf("TELEGRAM_CHAT_ID is required")
+	}
+
+	// Validate chatID against TRUSTED_CHAT_IDS (SSM or env)
+	trustedStr, err := resolveParameter(ctx, ssmClient, "TRUSTED_CHAT_IDS_PARAM", "TRUSTED_CHAT_IDS")
+	if err != nil {
+		return nil, fmt.Errorf("resolve trusted chat ids: %w", err)
+	}
+	if trustedStr != "" {
+		// parse comma-separated
+		parts := strings.Split(trustedStr, ",")
+		found := false
+		for _, p := range parts {
+			if strings.TrimSpace(p) == chatID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, fmt.Errorf("TELEGRAM_CHAT_ID %s is not present in TRUSTED_CHAT_IDS", chatID)
+		}
 	}
 
 	return &Config{

@@ -32,4 +32,5 @@ public class DbaEvent {
     private final Long timestamp;
     private final List<Extra> extras;
     private final String query;
+    private final String chatId;
 }
