@@ -9,6 +9,12 @@ variable "telegram_chat_id" {
   type        = string
 }
 
+variable "telegram_webhook_secret" {
+  description = "Secret token for Telegram webhook verification"
+  type        = string
+  sensitive   = true
+}
+
 variable "ingestor_schedule_daytime" {
   description = "EventBridge cron expression for daytime triggers (every 30 min, 07:00-21:59 UTC = 8 AM-10 PM Paris)"
   type        = string

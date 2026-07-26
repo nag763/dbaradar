@@ -37,6 +37,13 @@ make clean                                # Clean all service build artifacts
   cd services/telegram-notifier && GOOS=linux GOARCH=arm64 go build -o build/bootstrap ./cmd/notifier  # Build Lambda binary
   ```
 
+- **Telegram Webhooks (`services/webhooks`)**:
+  ```bash
+  cd services/webhooks && make build              # Build ARM64 binary and ZIP package
+  cd services/webhooks && go test -v -race ./... # Run unit tests with race detection
+  cd services/webhooks && make clean              # Clean build artifacts
+  ```
+
 - **Frontend (`front`)**:
   ```bash
   cd front && npm run dev                 # Start Vite dev server (port 3000)
@@ -54,7 +61,8 @@ services/                  # Backends
   services/dba/            # DBA updates poller — Quarkus Lambda (Quarkus Native, Amazon Linux 2023)
   services/analyzer/       # Deal Analyzer — Go Lambda (ARM64, Amazon Linux 2023) + Bedrock + DynamoDB
   services/telegram-notifier/# Telegram Notifier — Go Lambda (ARM64, Amazon Linux 2023) + SSM Parameter Store
-terraform/                 # AWS infra (Lambda, S3, IAM, SQS, DynamoDB, SSM) — deploys to eu-central-1
+  services/webhooks/       # Telegram Webhooks — Go Lambda (ARM64, Amazon Linux 2023) + API Gateway + Chi v5
+terraform/                 # AWS infra (Lambda, S3, IAM, SQS, DynamoDB, SSM, API Gateway) — deploys to eu-central-1
 ```
 
 ### Backend flow (Lambda pipeline)
@@ -63,9 +71,11 @@ terraform/                 # AWS infra (Lambda, S3, IAM, SQS, DynamoDB, SSM) —
 2. `dba-analyzer` (Go) — Triggered by SQS batch; checks DynamoDB (`dba-analyzed-events`) via `BatchGetItem`, analyzes new listings using Amazon Bedrock Nova 2 Lite, and publishes good deals to `deal-notifications` SQS queue.
 3. `dba-telegram-notifier` (Go) — Triggered by `deal-notifications` SQS queue; retrieves bot token from AWS SSM Parameter Store and sends HTML alert via Telegram Bot API.
 
-### Frontend
+### User webhook interaction (HTTP endpoint)
 
-Single-page app hitting `/dba/search` via axios. Validates with Zod schemas in `front/src/interactions/schemas/dba.ts`. API base URL set via `VITE_DBA_API_URL` (defaults to `http://localhost:8080`).
+- `dba-webhooks` (Go) — Triggered by Telegram webhook POST; receives bot commands (`/add`, `/remove`, `/clear`, `/list`) via API Gateway HTTP API v2; validates token and rate-limits per IP; processes command and echoes response back to Telegram.
+
+### Frontend
 
 ## 3. Data Model
 

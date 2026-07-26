@@ -148,3 +148,44 @@ resource "aws_iam_role" "telegram_notifier" {
     })
   }
 }
+
+# --- Webhooks Role ---
+
+resource "aws_iam_role" "webhooks" {
+  name = "dba-webhooks-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "lambda.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+
+  managed_policy_arns = [
+    "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+  ]
+
+  inline_policy {
+    name = "webhooks_permissions"
+    policy = jsonencode({
+      Version = "2012-10-17"
+      Statement = [
+        {
+          Effect = "Allow"
+          Action = ["ssm:GetParameter", "ssm:GetParameters"]
+          Resource = [
+            aws_ssm_parameter.telegram_webhook_secret.arn,
+            aws_ssm_parameter.trusted_chat_ids.arn
+          ]
+        },
+        {
+          Effect   = "Allow"
+          Action   = ["logs:CreateLogStream", "logs:PutLogEvents"]
+          Resource = "${aws_cloudwatch_log_group.webhooks.arn}:*"
+        }
+      ]
+    })
+  }
+}

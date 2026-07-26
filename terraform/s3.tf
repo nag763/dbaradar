@@ -4,6 +4,7 @@ locals {
   ingestor_zip_path = "../services/dba/target/function.zip"
   analyzer_zip_path = "../services/analyzer/build/analyzer.zip"
   notifier_zip_path = "../services/telegram-notifier/build/notifier.zip"
+  webhooks_zip_path = "../services/webhooks/build/webhooks.zip"
 }
 
 resource "aws_s3_bucket" "lambda_bucket" {
@@ -61,4 +62,11 @@ resource "aws_s3_object" "notifier_code" {
   key    = "deployments/dba-telegram-notifier-${filemd5(local.notifier_zip_path)}.zip"
   source = local.notifier_zip_path
   etag   = filemd5(local.notifier_zip_path)
+}
+
+resource "aws_s3_object" "webhooks_code" {
+  bucket = aws_s3_bucket.lambda_bucket.bucket
+  key    = "deployments/dba-webhooks-${filemd5(local.webhooks_zip_path)}.zip"
+  source = local.webhooks_zip_path
+  etag   = filemd5(local.webhooks_zip_path)
 }
