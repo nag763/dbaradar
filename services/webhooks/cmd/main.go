@@ -2,9 +2,7 @@ package main
 
 import (
 	"context"
-	"crypto/subtle"
 	"log/slog"
-	"net"
 	"os"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -20,13 +18,9 @@ var (
 	cfg    *config.Config
 )
 
-func constantTimeEqual(a, b string) bool {
-	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
-}
-
 func init() {
 	logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelInfo,
+		Level: slog.LevelDebug,
 	}))
 
 	var err error
@@ -54,59 +48,6 @@ func handleRequest(ctx context.Context, request events.APIGatewayV2HTTPRequest) 
 }
 
 func handleWebhook(ctx context.Context, request events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
-	sourceIP := request.RequestContext.HTTP.SourceIP
-
-	// Verify source IP is from Telegram if ranges are configured
-	if len(cfg.TelegramIPNets) > 0 {
-		ip := net.ParseIP(sourceIP)
-		if ip == nil {
-			logger.Warn("failed to parse source IP",
-				"ip", sourceIP,
-				"request_id", request.RequestContext.RequestID,
-			)
-			return events.APIGatewayV2HTTPResponse{
-				StatusCode: 401,
-				Body:       `{"error":"unauthorized"}`,
-			}, nil
-		}
-
-		allowed := false
-		for _, ipNet := range cfg.TelegramIPNets {
-			if ipNet.Contains(ip) {
-				allowed = true
-				break
-			}
-		}
-
-		if !allowed {
-			logger.Warn("webhook IP verification failed: IP not in Telegram range",
-				"ip", sourceIP,
-				"request_id", request.RequestContext.RequestID,
-			)
-			return events.APIGatewayV2HTTPResponse{
-				StatusCode: 401,
-				Body:       `{"error":"unauthorized"}`,
-			}, nil
-		}
-	}
-
-	logger.Debug("webhook IP verified", "ip", sourceIP)
-
-	// Verify token using constant-time comparison
-	token := request.Headers["x-telegram-bot-api-secret-token"]
-	if !constantTimeEqual(token, cfg.SecretToken) {
-		logger.Warn("webhook token verification failed",
-			"ip", sourceIP,
-			"token_provided", token != "",
-			"request_id", request.RequestContext.RequestID,
-		)
-		return events.APIGatewayV2HTTPResponse{
-			StatusCode: 401,
-			Body:       `{"error":"unauthorized"}`,
-		}, nil
-	}
-
-	logger.Debug("webhook token verified", "ip", sourceIP)
 
 	// Parse and handle webhook
 	response, statusCode := h.HandleWebhookRequest(ctx, request.Body)

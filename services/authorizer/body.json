@@ -1,0 +1,41 @@
+{
+  "version": "2.0",
+  "type": "REQUEST",
+  "routeArn": "arn:aws:execute-api:us-east-1:123456789012:abcdef1234/prod/GET/users/123",
+  "identitySource": [
+    "Bearer eyJhbGciOi..."
+  ],
+  "routeKey": "GET /users/{id}",
+  "rawPath": "/prod/users/123",
+  "rawQueryString": "filter=active",
+  "headers": {
+    "authorization": "Bearer eyJhbGciOi...",
+    "host": "abcdef1234.execute-api.us-east-1.amazonaws.com"
+  },
+  "queryStringParameters": {
+    "filter": "active"
+  },
+  "pathParameters": {
+    "id": "123"
+  },
+  "stageVariables": {
+    "env": "prod"
+  },
+  "requestContext": {
+    "accountId": "123456789012",
+    "apiId": "abcdef1234",
+    "domainName": "abcdef1234.execute-api.us-east-1.amazonaws.com",
+    "http": {
+      "method": "GET",
+      "path": "/prod/users/123",
+      "protocol": "HTTP/1.1",
+      "sourceIp": "192.0.2.1",
+      "userAgent": "Mozilla/5.0..."
+    },
+    "requestId": "c6af9ac6-7b61-11e6-9a41-93e812345678",
+    "routeKey": "GET /users/{id}",
+    "stage": "prod",
+    "time": "28/Jul/2026:18:39:40 +0000",
+    "timeEpoch": 1785263980000
+  }
+}

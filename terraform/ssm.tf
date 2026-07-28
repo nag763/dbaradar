@@ -13,3 +13,12 @@ resource "aws_ssm_parameter" "telegram_ip_ranges" {
   value = join(",", var.telegram_ip_ranges)
   tags  = var.default_tags
 }
+
+# --- Telegram Webhooks (Go, ARM64) ---
+
+resource "aws_ssm_parameter" "telegram_webhook_secret" {
+  name        = "/dba-webhooks/telegram_secret_token"
+  description = "Secret token for Telegram webhook verification"
+  type        = "SecureString"
+  value       = var.telegram_webhook_secret
+}

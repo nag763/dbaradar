@@ -107,14 +107,7 @@ resource "aws_lambda_event_source_mapping" "notifier_trigger" {
   enabled          = true
 }
 
-# --- Telegram Webhooks (Go, ARM64) ---
 
-resource "aws_ssm_parameter" "telegram_webhook_secret" {
-  name        = "/dba-webhooks/telegram_secret_token"
-  description = "Secret token for Telegram webhook verification"
-  type        = "SecureString"
-  value       = var.telegram_webhook_secret
-}
 
 resource "aws_lambda_function" "webhooks" {
   function_name    = "dba-webhooks"
@@ -130,14 +123,39 @@ resource "aws_lambda_function" "webhooks" {
 
   environment {
     variables = {
-      TELEGRAM_SECRET_TOKEN_PARAM = aws_ssm_parameter.telegram_webhook_secret.name
-      TRUSTED_CHAT_IDS_PARAM      = aws_ssm_parameter.trusted_chat_ids.name
-      TELEGRAM_IP_RANGES_PARAM    = aws_ssm_parameter.telegram_ip_ranges.name
+      TRUSTED_CHAT_IDS_PARAM = aws_ssm_parameter.trusted_chat_ids.name
     }
   }
 }
 
 resource "aws_cloudwatch_log_group" "webhooks" {
   name              = "/aws/lambda/dba-webhooks"
+  retention_in_days = 14
+}
+
+
+resource "aws_lambda_function" "authorizer" {
+  function_name    = "dba-authorizer"
+  role             = aws_iam_role.authorizer.arn
+  handler          = "bootstrap"
+  runtime          = "provided.al2023"
+  architectures    = ["arm64"]
+  s3_bucket        = aws_s3_object.authorizer_code.bucket
+  s3_key           = aws_s3_object.authorizer_code.key
+  source_code_hash = filebase64sha256(local.authorizer_zip_path)
+  timeout          = 10
+  memory_size      = 128
+
+  environment {
+    variables = {
+      TELEGRAM_SECRET_TOKEN_PARAM = aws_ssm_parameter.telegram_webhook_secret.name
+      TELEGRAM_IP_RANGES_PARAM    = aws_ssm_parameter.telegram_ip_ranges.name
+    }
+  }
+}
+
+
+resource "aws_cloudwatch_log_group" "authorizer" {
+  name              = "/aws/lambda/dba-authorizer"
   retention_in_days = 14
 }

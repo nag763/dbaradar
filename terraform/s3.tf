@@ -1,10 +1,11 @@
 # S3 bucket and deployment artifacts for all Lambda functions.
 
 locals {
-  ingestor_zip_path = "../services/dba/target/function.zip"
-  analyzer_zip_path = "../services/analyzer/build/analyzer.zip"
-  notifier_zip_path = "../services/telegram-notifier/build/notifier.zip"
-  webhooks_zip_path = "../services/webhooks/build/webhooks.zip"
+  ingestor_zip_path   = "../services/dba/target/function.zip"
+  analyzer_zip_path   = "../services/analyzer/build/analyzer.zip"
+  notifier_zip_path   = "../services/telegram-notifier/build/notifier.zip"
+  webhooks_zip_path   = "../services/webhooks/build/webhooks.zip"
+  authorizer_zip_path = "../services/authorizer/build/authorizer.zip"
 }
 
 resource "aws_s3_bucket" "lambda_bucket" {
@@ -69,4 +70,11 @@ resource "aws_s3_object" "webhooks_code" {
   key    = "deployments/dba-webhooks-${filemd5(local.webhooks_zip_path)}.zip"
   source = local.webhooks_zip_path
   etag   = filemd5(local.webhooks_zip_path)
+}
+
+resource "aws_s3_object" "authorizer_code" {
+  bucket = aws_s3_bucket.lambda_bucket.bucket
+  key    = "deployments/dba-authorizer-${filemd5(local.authorizer_zip_path)}.zip"
+  source = local.authorizer_zip_path
+  etag   = filemd5(local.authorizer_zip_path)
 }
