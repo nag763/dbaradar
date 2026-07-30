@@ -7,7 +7,7 @@ import (
 
 // Command represents a parsed bot command.
 type Command struct {
-	Name      string   `validate:"required,oneof=add remove clear list"`
+	Name      string   `validate:"required,oneof=add remove list"`
 	Arguments []string `validate:"required_if=Name add,required_if=Name remove"`
 	ChatID    uint64   `validate:"required"`
 	UserID    uint64   `validate:"required,eqfield=ChatID"`
