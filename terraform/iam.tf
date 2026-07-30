@@ -186,7 +186,7 @@ resource "aws_iam_role" "webhooks" {
         },
         {
           Effect   = "Allow"
-          Action   = ["dynamodb:Query", "dynamodb:PutItem"]
+          Action   = ["dynamodb:Query", "dynamodb:PutItem" ,"dynamodb:DeleteItem", "dynamodb:Query"]
           Resource = aws_dynamodb_table.trusted_chat_queries.arn
         }
       ]

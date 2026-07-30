@@ -12,7 +12,7 @@ type Message struct {
 	From      *User  `json:"from,omitempty"`
 	Chat      *Chat  `json:"chat,omitempty"`
 	Date      int64  `json:"date"`
-	Text      string `json:"text,omitempty"`
+	Text      string `json:"text,omitempty" validate:"required,max=96"`
 }
 
 // User represents a Telegram user.

@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/nag763/dbaradar/services/webhooks/internal/model"
 	"github.com/nag763/dbaradar/services/webhooks/internal/query"
 	"github.com/nag763/dbaradar/services/webhooks/internal/trusted"
@@ -17,6 +19,7 @@ type Handler struct {
 	logger   *slog.Logger
 	cfg      *trusted.Trusted
 	querySvc *query.QueryService
+	validate *validator.Validate
 }
 
 // NewHandler creates a new Handler.
@@ -25,6 +28,7 @@ func NewHandler(logger *slog.Logger, cfg *trusted.Trusted, querySvc *query.Query
 		logger:   logger,
 		cfg:      cfg,
 		querySvc: querySvc,
+		validate: validator.New(),
 	}
 }
 
@@ -40,12 +44,11 @@ func (h *Handler) HandleWebhookRequest(ctx context.Context, body string) (string
 	}
 
 	// Extract message and text
-	if update.Message == nil || update.Message.Text == "" {
-		h.logger.Debug("webhook received message without text",
-			"update_id", update.UpdateID,
-			"has_message", update.Message != nil,
+	if err := h.validate.Struct(update); err != nil {
+		h.logger.Debug("webhook received message has an error",
+			"err", err,
 		)
-		return `{}`, 200
+		return `{"error": "invalid request"}`, 200
 	}
 
 	// Extract chat and user IDs for validation
@@ -75,7 +78,7 @@ func (h *Handler) HandleWebhookRequest(ctx context.Context, body string) (string
 			"chat_trusted", isChatTrusted,
 			"user_trusted", isUserTrusted,
 		)
-		return `{"error":"forbidden"}`, 403
+		return `{}`, 200
 	}
 
 	h.logger.Debug("webhook request accepted",
@@ -109,24 +112,52 @@ func (h *Handler) HandleWebhookRequest(ctx context.Context, body string) (string
 		"message_id", cmd.MessageID,
 	)
 
+	if err := h.validate.Struct(cmd); err != nil {
+		h.logger.Warn("the received command is not legit", "err", err)
+		return `{}`, 200
+	}
+
 	// Route to command handler
 	var responseText string
 	switch cmd.Name {
 	case "add":
 		itemNameToAdd := cmd.GetArgumentsJoined()
 		h.logger.Debug("trying to insert new query", "chatId", chatIDStr, "item", itemNameToAdd)
-		if err = h.querySvc.AddItem(ctx, chatIDStr, itemNameToAdd); err != nil {
+		if err = h.querySvc.AddItem(ctx, query.ItemCommand{
+			ClientId: chatIDStr,
+			ItemName: itemNameToAdd,
+		}); err != nil {
 			h.logger.Error("an error happened while trying to insert the item", "err", err)
 			responseText = fmt.Sprintf("An error happened while trying to add `%s`", itemNameToAdd)
 			break
 		}
 		responseText = fmt.Sprintf("The item %s has been added to your watchlist", itemNameToAdd)
 	case "remove":
-		responseText = fmt.Sprintf("Echo /%s with args: %v", cmd.Name, cmd.Arguments)
-	case "clear":
-		responseText = fmt.Sprintf("Echo /%s with args: %v", cmd.Name, cmd.Arguments)
+		itemNameToRemove := cmd.GetArgumentsJoined()
+		h.logger.Debug("trying to remove query", "chatId", chatIDStr, "item", itemNameToRemove)
+		if err = h.querySvc.RemoveItem(ctx, query.ItemCommand{
+			ClientId: chatIDStr,
+			ItemName: itemNameToRemove,
+		}); err != nil {
+			h.logger.Error("an error happened while trying to remove the item", "err", err)
+			responseText = fmt.Sprintf("An error happened while trying to remove `%s`", itemNameToRemove)
+			break
+		}
+		responseText = fmt.Sprintf("The item %s has been removed from your watchlist", itemNameToRemove)
 	case "list":
-		responseText = fmt.Sprintf("Echo /%s with args: %v", cmd.Name, cmd.Arguments)
+		h.logger.Info("trying to access all the queries for chatId", "chatId", chatID)
+		items, err := h.querySvc.ListItems(ctx, chatIDStr)
+		if err != nil {
+			h.logger.Error("an error happened while trying to query items", "err", err)
+			responseText = "An error happened while trying to retrieve your queries"
+		}
+		var sb strings.Builder
+		sb.WriteString("Your current watchlist :")
+		sb.WriteRune('\n')
+		for _, item := range items {
+			sb.WriteString(fmt.Sprintf("- %s\n", item.ItemName))
+		}
+		responseText = sb.String()
 	default:
 		responseText = "Unknown command"
 	}

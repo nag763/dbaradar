@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"testing"
 
-	"github.com/nag763/dbaradar/services/webhooks/internal/config"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/nag763/dbaradar/services/webhooks/internal/model"
 )
 
