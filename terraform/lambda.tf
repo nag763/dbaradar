@@ -124,6 +124,7 @@ resource "aws_lambda_function" "webhooks" {
   environment {
     variables = {
       TRUSTED_CHAT_IDS_PARAM = aws_ssm_parameter.trusted_chat_ids.name
+      CHAT_QUERIES_TABLE_NAME = aws_dynamodb_table.trusted_chat_queries.name
     }
   }
 }

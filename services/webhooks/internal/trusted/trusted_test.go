@@ -1,4 +1,4 @@
-package config
+package trusted
 
 import (
 	"context"
@@ -20,11 +20,11 @@ func (m *MockSSMGetter) GetParameter(ctx context.Context, params *ssm.GetParamet
 
 func TestLoadConfig(t *testing.T) {
 	tests := []struct {
-		name             string
-		envChatIDParam   string
-		ssmMock          *MockSSMGetter
-		wantChatIDs      map[string]bool
-		wantError        bool
+		name           string
+		envChatIDParam string
+		ssmMock        *MockSSMGetter
+		wantChatIDs    map[string]bool
+		wantError      bool
 	}{
 		{
 			name:        "empty config",
@@ -101,12 +101,12 @@ func TestLoadConfig(t *testing.T) {
 				t.Errorf("unexpected error: %v", err)
 			}
 
-			if len(cfg.TrustedChatIDs) != len(tt.wantChatIDs) {
-				t.Errorf("want %d trusted chat IDs, got %d", len(tt.wantChatIDs), len(cfg.TrustedChatIDs))
+			if len(cfg.ChatIDs) != len(tt.wantChatIDs) {
+				t.Errorf("want %d trusted chat IDs, got %d", len(tt.wantChatIDs), len(cfg.ChatIDs))
 			}
 
 			for id := range tt.wantChatIDs {
-				if !cfg.TrustedChatIDs[id] {
+				if !cfg.ChatIDs[id] {
 					t.Errorf("want trusted chat ID %q, but not found", id)
 				}
 			}

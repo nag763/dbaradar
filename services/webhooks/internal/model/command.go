@@ -9,23 +9,25 @@ import (
 type Command struct {
 	Name      string
 	Arguments []string
-	ChatID    int64
-	UserID    int64
+	ChatID    uint64
+	UserID    uint64
 	MessageID int
 }
 
 // CommandResponse represents a response to send back to Telegram.
 type CommandResponse struct {
 	Method string `json:"method"`
-	ChatID int64  `json:"chat_id"`
+	ChatID uint64 `json:"chat_id"`
 	Text   string `json:"text"`
 }
 
-var validCommands = map[string]bool{
-	"add":    true,
-	"remove": true,
-	"clear":  true,
-	"list":   true,
+var validCommands = map[string]map[string]bool{
+	"add": {
+		"requiresArgument": true,
+	},
+	"remove": {},
+	"clear":  {},
+	"list":   {},
 }
 
 // ParseCommand extracts a command from message text.
@@ -47,7 +49,7 @@ func ParseCommand(text string) (*Command, error) {
 	}
 
 	cmdName := strings.TrimPrefix(cmdPart, "/")
-	if !validCommands[cmdName] {
+	if validCommands[cmdName] == nil {
 		return nil, fmt.Errorf("unknown command: %s", cmdName)
 	}
 
@@ -56,8 +58,23 @@ func ParseCommand(text string) (*Command, error) {
 		args = parts[1:]
 	}
 
+	if len(args) == 0 && validCommands[cmdName]["requiresArgument"] {
+		return nil, fmt.Errorf("this command needs an argument, for example `%s iphone`", cmdName)
+	}
+
 	return &Command{
 		Name:      cmdName,
 		Arguments: args,
 	}, nil
+}
+
+func (c *Command) GetArgumentsJoined() string {
+	if len(c.Arguments) == 0 {
+		return ""
+	}
+	return strings.Join(c.Arguments, " ")
+}
+
+func (c *Command) HasArguments() bool {
+	return len(c.GetArgumentsJoined()) != 0
 }

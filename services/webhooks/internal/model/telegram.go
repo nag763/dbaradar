@@ -17,7 +17,7 @@ type Message struct {
 
 // User represents a Telegram user.
 type User struct {
-	ID           int64  `json:"id"`
+	ID           uint64 `json:"id"`
 	FirstName    string `json:"first_name"`
 	LastName     string `json:"last_name,omitempty"`
 	Username     string `json:"username,omitempty"`
@@ -26,7 +26,7 @@ type User struct {
 
 // Chat represents a Telegram chat.
 type Chat struct {
-	ID       int64  `json:"id"`
+	ID       uint64 `json:"id"`
 	Type     string `json:"type"`
 	Title    string `json:"title,omitempty"`
 	Username string `json:"username,omitempty"`

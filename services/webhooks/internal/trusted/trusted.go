@@ -1,4 +1,4 @@
-package config
+package trusted
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 )
 
@@ -15,20 +14,13 @@ type SSMGetter interface {
 	GetParameter(ctx context.Context, params *ssm.GetParameterInput, optFns ...func(*ssm.Options)) (*ssm.GetParameterOutput, error)
 }
 
-// Config holds the resolved configuration.
-type Config struct {
-	TrustedChatIDs map[string]bool
+// Trusted holds the resolved configuration.
+type Trusted struct {
+	ChatIDs map[string]bool
 }
 
 // Load resolves configuration from environment variables and AWS SSM.
-func Load(ctx context.Context, ssmClient SSMGetter) (*Config, error) {
-	if ssmClient == nil {
-		cfg, err := config.LoadDefaultConfig(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load AWS config: %w", err)
-		}
-		ssmClient = ssm.NewFromConfig(cfg)
-	}
+func Load(ctx context.Context, ssmClient ssm.Client) (*Trusted, error) {
 
 	trustedChatIDs := make(map[string]bool)
 	trustedChatIDsParam := os.Getenv("TRUSTED_CHAT_IDS_PARAM")
@@ -52,7 +44,7 @@ func Load(ctx context.Context, ssmClient SSMGetter) (*Config, error) {
 		}
 	}
 
-	return &Config{
-		TrustedChatIDs: trustedChatIDs,
+	return &Trusted{
+		ChatIDs: trustedChatIDs,
 	}, nil
 }

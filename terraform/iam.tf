@@ -183,6 +183,11 @@ resource "aws_iam_role" "webhooks" {
           Effect   = "Allow"
           Action   = ["logs:CreateLogStream", "logs:PutLogEvents"]
           Resource = "${aws_cloudwatch_log_group.webhooks.arn}:*"
+        },
+        {
+          Effect   = "Allow"
+          Action   = ["dynamodb:Query", "dynamodb:PutItem"]
+          Resource = aws_dynamodb_table.trusted_chat_queries.arn
         }
       ]
     })

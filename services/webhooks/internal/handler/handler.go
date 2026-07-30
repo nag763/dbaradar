@@ -7,21 +7,24 @@ import (
 	"log/slog"
 	"strconv"
 
-	"github.com/nag763/dbaradar/services/webhooks/internal/config"
 	"github.com/nag763/dbaradar/services/webhooks/internal/model"
+	"github.com/nag763/dbaradar/services/webhooks/internal/query"
+	"github.com/nag763/dbaradar/services/webhooks/internal/trusted"
 )
 
 // Handler processes webhook requests.
 type Handler struct {
-	logger *slog.Logger
-	cfg    *config.Config
+	logger   *slog.Logger
+	cfg      *trusted.Trusted
+	querySvc *query.QueryService
 }
 
 // NewHandler creates a new Handler.
-func NewHandler(logger *slog.Logger, cfg *config.Config) *Handler {
+func NewHandler(logger *slog.Logger, cfg *trusted.Trusted, querySvc *query.QueryService) *Handler {
 	return &Handler{
-		logger: logger,
-		cfg:    cfg,
+		logger:   logger,
+		cfg:      cfg,
+		querySvc: querySvc,
 	}
 }
 
@@ -46,8 +49,8 @@ func (h *Handler) HandleWebhookRequest(ctx context.Context, body string) (string
 	}
 
 	// Extract chat and user IDs for validation
-	var chatID int64
-	var userID int64
+	var chatID uint64
+	var userID uint64
 	var chatType string
 	if update.Message.Chat != nil {
 		chatID = update.Message.Chat.ID
@@ -58,10 +61,10 @@ func (h *Handler) HandleWebhookRequest(ctx context.Context, body string) (string
 	}
 
 	// Validate chat ID and user ID are trusted
-	chatIDStr := strconv.FormatInt(chatID, 10)
-	userIDStr := strconv.FormatInt(userID, 10)
-	isChatTrusted := h.cfg.TrustedChatIDs[chatIDStr]
-	isUserTrusted := h.cfg.TrustedChatIDs[userIDStr]
+	chatIDStr := strconv.FormatUint(chatID, 10)
+	userIDStr := strconv.FormatUint(userID, 10)
+	isChatTrusted := h.cfg.ChatIDs[chatIDStr]
+	isUserTrusted := h.cfg.ChatIDs[userIDStr]
 
 	if !isChatTrusted && !isUserTrusted {
 		h.logger.Warn("access denied: untrusted chat or user",
@@ -110,7 +113,14 @@ func (h *Handler) HandleWebhookRequest(ctx context.Context, body string) (string
 	var responseText string
 	switch cmd.Name {
 	case "add":
-		responseText = fmt.Sprintf("Echo /%s with args: %v", cmd.Name, cmd.Arguments)
+		itemNameToAdd := cmd.GetArgumentsJoined()
+		h.logger.Debug("trying to insert new query", "chatId", chatIDStr, "item", itemNameToAdd)
+		if err = h.querySvc.AddItem(ctx, chatIDStr, itemNameToAdd); err != nil {
+			h.logger.Error("an error happened while trying to insert the item", "err", err)
+			responseText = fmt.Sprintf("An error happened while trying to add `%s`", itemNameToAdd)
+			break
+		}
+		responseText = fmt.Sprintf("The item %s has been added to your watchlist", itemNameToAdd)
 	case "remove":
 		responseText = fmt.Sprintf("Echo /%s with args: %v", cmd.Name, cmd.Arguments)
 	case "clear":
