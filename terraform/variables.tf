@@ -37,12 +37,11 @@ variable "default_tags" {
   }
 }
 
-variable "trusted_chat_subscriptions" {
-  description = "Mapping of chatId -> list of queries to populate trusted-chat-queries"
-  type        = map(list(string))
-  default = {
-    "5253905011" = ["canon r7", "canon r8", "canon r6", "olympus om-d em-5", "lumix gx80", "sony a6700", "sony a6600", "sony a6400", "canon r10", "nikon z6", "nikon z5", "olympus om-d e-m10"]
-  }
+variable "trusted_chat_ids" {
+  description = "Trusted chat ids"
+  type        = list(string)
+  default = ["5253905011"]
+
 }
 
 variable "telegram_ip_ranges" {

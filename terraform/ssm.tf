@@ -2,7 +2,7 @@
 resource "aws_ssm_parameter" "trusted_chat_ids" {
   name  = "/dbanalyzer/trusted_chat_ids"
   type  = "String"
-  value = join(",", keys(var.trusted_chat_subscriptions))
+  value = join(",", var.trusted_chat_ids)
   tags  = var.default_tags
 }
 
