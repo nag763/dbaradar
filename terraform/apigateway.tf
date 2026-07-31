@@ -1,3 +1,10 @@
+resource "random_string" "random_endpoint" {
+  length  = 96
+  special = false
+  lower   = true
+  upper   = true
+}
+
 resource "aws_apigatewayv2_api" "webhooks" {
   name          = "dba-webhooks-api"
   protocol_type = "HTTP"
@@ -59,7 +66,7 @@ resource "aws_apigatewayv2_integration" "lambda" {
 
 resource "aws_apigatewayv2_route" "webhook" {
   api_id             = aws_apigatewayv2_api.webhooks.id
-  route_key          = "POST /webhook"
+  route_key          = "POST /${random_string.random_endpoint.result}"
   target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
   authorization_type = "CUSTOM"
   authorizer_id      = aws_apigatewayv2_authorizer.lambda_auth.id
@@ -96,6 +103,6 @@ resource "aws_lambda_permission" "authorizer" {
 }
 
 output "webhook_url" {
-  value       = "${aws_apigatewayv2_stage.webhooks.invoke_url}/webhook"
+  value       = "${aws_apigatewayv2_stage.webhooks.invoke_url}${random_string.random_endpoint.result}"
   description = "Webhook URL for Telegram bot"
 }

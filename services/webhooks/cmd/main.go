@@ -52,20 +52,6 @@ func init() {
 }
 
 func handleRequest(ctx context.Context, request events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
-	if request.RouteKey != "POST /webhook" {
-		logger.Warn("invalid route",
-			"method", request.RequestContext.HTTP.Method,
-			"ip", request.RequestContext.HTTP.SourceIP,
-		)
-		return events.APIGatewayV2HTTPResponse{
-			StatusCode: 404,
-			Body:       `{"error":"not found"}`,
-		}, nil
-	}
-	return handleWebhook(ctx, request)
-}
-
-func handleWebhook(ctx context.Context, request events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 
 	// Parse and handle webhook
 	response, statusCode := h.HandleWebhookRequest(ctx, request.Body)

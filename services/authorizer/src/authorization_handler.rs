@@ -45,15 +45,6 @@ pub(crate) async fn function_handler(
     if payload.request_context.http.method != Method::POST {
         return Ok(create_rejection("method isn't allowed"));
     }
-    if payload
-        .request_context
-        .http
-        .path
-        .unwrap_or("null".to_string())
-        != "/webhook"
-    {
-        return Ok(create_rejection("path not allowed"));
-    }
 
     debug!("Checking headers...");
     debug!("Checking IP...");
