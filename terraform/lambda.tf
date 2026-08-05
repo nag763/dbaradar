@@ -7,7 +7,7 @@ resource "aws_lambda_function" "dba_ingestor" {
   role             = aws_iam_role.ingestor.arn
   handler          = "bootstrap"
   runtime          = "provided.al2023"
-  architectures    = ["x86_64"]
+  architectures    = ["arm64"]
   s3_bucket        = aws_s3_object.ingestor_code.bucket
   s3_key           = aws_s3_object.ingestor_code.key
   source_code_hash = filebase64sha256(local.ingestor_zip_path)

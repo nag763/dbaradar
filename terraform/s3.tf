@@ -1,7 +1,7 @@
 # S3 bucket and deployment artifacts for all Lambda functions.
 
 locals {
-  ingestor_zip_path   = "../services/dba/target/function.zip"
+  ingestor_zip_path   = "../services/dbago/build/fetcher.zip"
   analyzer_zip_path   = "../services/analyzer/build/analyzer.zip"
   notifier_zip_path   = "../services/telegram-notifier/build/notifier.zip"
   webhooks_zip_path   = "../services/webhooks/build/webhooks.zip"
