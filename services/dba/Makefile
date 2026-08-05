@@ -1,16 +1,11 @@
-.PHONY: dev test package build-native clean
+.PHONY: build clean test
 
-dev:
-	quarkus dev
-
-test:
-	quarkus test
-
-package:
-	quarkus build
-
-build-native:
-	quarkus build --native
+build:
+	GOOS=linux GOARCH=arm64 go build -tags lambda.norpc -o build/bootstrap ./cmd/fetcher
+	cd build && zip fetcher.zip bootstrap
 
 clean:
-	./mvnw clean
+	rm -rf build/
+
+test:
+	go test -v -race ./...

@@ -1,7 +1,7 @@
 .PHONY: build test clean dev-dba
 
 build:
-	$(MAKE) -C services/dba build-native
+	$(MAKE) -C services/dba build
 	$(MAKE) -C services/analyzer build
 	$(MAKE) -C services/telegram-notifier build
 	$(MAKE) -C services/webhooks build
@@ -20,6 +20,3 @@ clean:
 	$(MAKE) -C services/telegram-notifier clean
 	$(MAKE) -C services/webhooks clean
 	$(MAKE) -C services/authorizer clean
-
-dev-dba:
-	$(MAKE) -C services/dba dev
