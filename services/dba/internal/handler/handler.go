@@ -60,7 +60,7 @@ func (h *HandlerService) Handle(ctx context.Context, event events.EventBridgeEve
 			defer func() { <-sem }()
 
 			h.logger.Info("fetching dba for client", "clientId", query.ClientId, "query", query.Query)
-			dbaDocs, err := h.fetcherSvc.FetchDba(query.Query)
+			dbaDocs, err := h.fetcherSvc.FetchDba(ctx, query.Query)
 			if err != nil {
 				h.logger.Warn("an error happened while attempting to fetch query, no event will be published for the item", "clientId", query.ClientId, "query", query.Query, "err", err)
 				return
@@ -75,7 +75,6 @@ func (h *HandlerService) Handle(ctx context.Context, event events.EventBridgeEve
 				h.logger.Error("an error happened while publishing events in queue", "err", err)
 				sqsErrorsChan <- 1
 			}
-			sqsErrorsChan <- 0
 		}(q)
 
 	}

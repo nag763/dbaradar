@@ -20,7 +20,7 @@ Analyze the listing and determine if it is a good deal (priced attractively for 
 Query matching (CRITICAL):
 - The listing MUST match the search query. The primary item in the listing must be the product type searched for, not a tangential side item.
 - For example: if the query is "canon r7" (a camera), reject a tripod listing even if it mentions "canon r7 tripod" or "for canon cameras" — a tripod alone is a side accessory, NOT the camera itself.
-- HOWEVER: if the listing is selling a bundle (e.g., "Canon R7 camera + tripod + spare lenses"), analyze the ENTIRE bundle's value, as the main item (camera) is present alongside accessories.
+- HOWEVER: if the listing is selling a bundle (e.g., "Canon R7 camera + tripod + spare lenses"), analyze the ENTIRE bundle's value, as the main item (camera) is present alongside accessories. Only do that if the bundle's value is interesting compared to the main item being sold's value (for instance, if the kit costs 10 times the item but still is a good deal, it should be ignored).
 - If the listing is primarily a side item, accessory, or unrelated product despite mentioning the search term, return NOT_A_DEAL.
 
 Output requirements (MANDATORY):
