@@ -10,7 +10,6 @@ func ToSqsEvent(doc fetcher.DbaDoc, eventID, query, chatID string) SqsEvent {
 		Price:        doc.Price,
 		Location:     doc.Location,
 		CanonicalURL: doc.CanonicalURL,
-		ImageURLs:    doc.ImageURLs,
 		Brand:        doc.Brand,
 		Timestamp:    doc.Timestamp,
 		Extras:       doc.Extras,

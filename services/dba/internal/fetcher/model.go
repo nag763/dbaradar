@@ -19,12 +19,11 @@ type DbaDoc struct {
 	// Handles both canonicalUrl and canonical_url
 	CanonicalURL string `json:"canonical_url,omitempty"`
 
-	Extras    []Extra  `json:"extras,omitempty"`
-	Price     Price    `json:"price,omitempty"`
-	Distance  int      `json:"distance,omitempty"`
-	ImageURLs []string `json:"imageUrls,omitempty"`
-	Brand     string   `json:"brand,omitempty"`
-	AdID      int64    `json:"adId,omitempty"`
+	Extras   []Extra `json:"extras,omitempty"`
+	Price    Price   `json:"price,omitempty"`
+	Distance int     `json:"distance,omitempty"`
+	Brand    string  `json:"brand,omitempty"`
+	AdID     int64   `json:"adId,omitempty"`
 }
 
 type Image struct {
@@ -33,9 +32,7 @@ type Image struct {
 }
 
 type Label struct {
-	ID   string `json:"id,omitempty"`
-	Text string `json:"text,omitempty"`
-	Type string `json:"type,omitempty"`
+	ID string `json:"id,omitempty"`
 }
 
 type Extra struct {
@@ -46,12 +43,8 @@ type Extra struct {
 
 type Price struct {
 	Amount       int    `json:"amount,omitempty"`
-	CurrencyCode string `json:"currencyCode,omitempty"`
-	PriceUnit    string `json:"priceUnit,omitempty"`
-}
-
-func (p Price) DefaultCurrency() string {
-	return "DKK"
+	CurrencyCode string `json:"currency_code,omitempty"`
+	PriceUnit    string `json:"price_unit,omitempty"`
 }
 
 type Metadata struct {

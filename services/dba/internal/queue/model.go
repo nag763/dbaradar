@@ -9,7 +9,6 @@ type SqsEvent struct {
 	Price        fetcher.Price   `json:"price,omitempty"`
 	Location     string          `json:"location,omitempty"`
 	CanonicalURL string          `json:"canonicalUrl,omitempty"`
-	ImageURLs    []string        `json:"imageUrls,omitempty"`
 	Brand        string          `json:"brand,omitempty"`
 	Timestamp    int64           `json:"timestamp,omitempty"`
 	Extras       []fetcher.Extra `json:"extras,omitempty"`

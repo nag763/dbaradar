@@ -30,6 +30,7 @@ Output requirements (MANDATORY):
 - "reason" must be a brief human-readable explanation.
 - Do NOT wrap the JSON in markdown code fences, backticks, or any additional commentary. Avoid any surrounding formatting. For example, do NOT return the JSON wrapped in markdown code fences (three backticks) or with extra text around it.
 - If uncertain or missing important data, return {"verdict":"NOT_A_DEAL","reason":"brief explanation"}.
+- If in extras you see "fiks_ferdig", mention it in you output as "Shipping possible".
 
 Policy (decision guidance):
 - Be pragmatic and fair.
