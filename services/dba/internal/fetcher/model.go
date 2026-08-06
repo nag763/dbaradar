@@ -17,7 +17,7 @@ type DbaDoc struct {
 	Labels        []Label  `json:"labels,omitempty"`
 
 	// Handles both canonicalUrl and canonical_url
-	CanonicalURL string `json:"canonicalUrl,omitempty"`
+	CanonicalURL string `json:"canonical_url,omitempty"`
 
 	Extras    []Extra  `json:"extras,omitempty"`
 	Price     Price    `json:"price,omitempty"`

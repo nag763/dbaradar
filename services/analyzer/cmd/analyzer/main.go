@@ -41,7 +41,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	ttlDays := 5
+	ttlDays := 10
 	if ttlStr := os.Getenv("DEDUP_TTL_DAYS"); ttlStr != "" {
 		if parsed, err := strconv.Atoi(ttlStr); err == nil && 0 < parsed {
 			ttlDays = parsed
