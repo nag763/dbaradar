@@ -10,7 +10,8 @@ import (
 )
 
 type ClientIdQueryItem struct {
-	ClientId string `dynamodbav:"clientId"`
+	// ChatId and client ID are the same
+	ClientId string `dynamodbav:"chatId"`
 	Query    string `dynamodbav:"query"`
 }
 
